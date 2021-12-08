@@ -1,6 +1,9 @@
 // ignore_for_file: prefer_const_constructors, avoid_unnecessary_containers, prefer_const_literals_to_create_immutables, unused_local_variable, library_prefixes, avoid_print
 
 import 'package:flutter/material.dart';
+import 'package:flutter_ui_chat_app/controller/chat_controller.dart';
+import 'package:flutter_ui_chat_app/model/message.dart';
+import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ChatScreen extends StatefulWidget {
@@ -15,6 +18,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Color black = Color(0xFF191919);
   TextEditingController messageinputcontro = TextEditingController();
   late IO.Socket socket;
+  ChatController chatController = ChatController();
 
   @override
   void initState() {
@@ -32,25 +36,27 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.grey[600],
       body: Container(
         child: Column(
           children: [
             Expanded(
                 flex: 9,
-                child: Container(
-                  child: ListView.builder(
-                      itemCount: 10,
+                child: Obx(
+                  () => ListView.builder(
+                      itemCount: chatController.chatmessage.length,
                       itemBuilder: (context, index) {
+                        var currentitem = chatController.chatmessage[index];
                         return MessageItem(
-                          sentbyme: false,
+                          sentbyme: currentitem.sentbyme == socket.id,
+                          message: currentitem.message,
                         );
                       }),
                 )),
             Expanded(
                 child: Container(
               padding: EdgeInsets.all(10),
-              color: Colors.blue,
+              color: Colors.grey[800],
               child: TextField(
                 cursorColor: green,
                 style: TextStyle(color: Colors.white),
@@ -84,19 +90,23 @@ class _ChatScreenState extends State<ChatScreen> {
   void sendMessage(String text) {
     var messagejson = {"message": text, "sentbyme": socket.id};
     socket.emit('message', messagejson);
+    chatController.chatmessage.add(Message.fromJson(messagejson));
   }
 
   void setupsocketlistner() {
     socket.on('message-receive', (data) {
       print(data);
+      chatController.chatmessage.add(Message.fromJson(data));
     });
   }
 }
 
 class MessageItem extends StatelessWidget {
-  const MessageItem({Key? key, required this.sentbyme}) : super(key: key);
+  const MessageItem({Key? key, required this.sentbyme, required this.message})
+      : super(key: key);
 
   final bool sentbyme;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +129,7 @@ class MessageItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Text(
-              "Hello",
+              message,
               style: TextStyle(color: sentbyme ? white : black, fontSize: 18),
             ),
             SizedBox(
