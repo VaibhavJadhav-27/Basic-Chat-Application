@@ -3,4 +3,5 @@ import 'package:get/get.dart';
 
 class ChatController extends GetxController {
   var chatmessage = <Message>[].obs;
+  var connecteduser = 0.obs;
 }
